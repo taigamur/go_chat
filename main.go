@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/objx"
 )
 
+var avatars Avatar = UserFileSystemAvatar
+
 type templateHandler struct {
 	once     sync.Once
 	filename string
@@ -54,7 +56,7 @@ func main() {
 		// github.New()
 		google.New(os.Getenv("GOOGLE_KEY"), os.Getenv("GOOGLE_SECRET"), "http://localhost:8080/auth/callback/google"),
 	)
-	r := newRoom()
+	r := newRoom(UserFileSystemAvatar)
 	http.Handle("/chat", MustAuth(&templateHandler{filename: "chat.html"}))
 	http.Handle("/login", &templateHandler{filename: "login.html"})
 	http.HandleFunc("/auth/", loginHandler)
@@ -68,6 +70,11 @@ func main() {
 		w.Header()["Location"] = []string{"/chat"}
 	})
 	http.Handle("/room", r)
+	http.Handle("/upload", &templateHandler{filename: "upload.html"})
+	http.HandleFunc("/uploader", uploaderHandler)
+	http.Handle("/avatars/",
+		http.StripPrefix("/avatars",
+			http.FileServer(http.Dir("./avatars"))))
 	go r.run()
 	log.Println("Webサーバを開始します。ポート: ", *addr)
 	if err := http.ListenAndServe(*addr, nil); err != nil {
